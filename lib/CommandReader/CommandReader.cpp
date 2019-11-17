@@ -1,34 +1,16 @@
 #include <Arduino.h>
 #include "CommandReader.h"
 
-#define DEBUG_TO_SERIAL 0
+#define SERIAL_PRINT_PARSING 0
+#define SERIAL_PRINT_RESULT 0
 
 CommandReader::CommandReader()
 {
-    _verticalDegrees = -1;
-    _horizontalDegrees = -1;
+    _xOffsetPercent = 0;
+    _yOffsetPercent = 0;
+    _shouldMove = false;
     _shouldFire = false;
     _buffer = "";
-}
-
-int CommandReader::getVerticalDegrees()
-{
-    return _verticalDegrees;
-}
-
-int CommandReader::getHorizontalDegrees()
-{
-    return _horizontalDegrees;
-}
-
-bool CommandReader::shouldFire()
-{
-    return _shouldFire;
-}
-
-void CommandReader::fired()
-{
-    _shouldFire = false;
 }
 
 void CommandReader::read()
@@ -49,9 +31,9 @@ void CommandReader::read()
 
 void CommandReader::parseBuffer()
 {
-    String buffer = "";
+    String parsedString = "";
     int currentIndex = 0;
-    int numbers[2] = {-1, -1};
+    int numbers[3] = {0, 0, 0};
 
     for (int index = 0; index < (int)_buffer.length(); index++)
     {
@@ -59,12 +41,12 @@ void CommandReader::parseBuffer()
 
         if (currentChar == ',' || currentChar == '\n')
         {
-            int number = buffer.toInt();
+            int number = parsedString.toInt();
             numbers[currentIndex] = number;
 
-            #if DEBUG_TO_SERIAL
+            #if SERIAL_PRINT_PARSING
             Serial.print("Buffer: '");
-            Serial.print(buffer);
+            Serial.print(parsedString);
             Serial.print("'; Read number: '");
             Serial.print(number);
             Serial.print("'; Index: '");
@@ -72,18 +54,18 @@ void CommandReader::parseBuffer()
             Serial.println("'");
             #endif
 
-            buffer = "";
+            parsedString = "";
             currentIndex++;
         }
         else
         {
-            buffer += currentChar;
+            parsedString += currentChar;
 
-            #if DEBUG_TO_SERIAL
+            #if SERIAL_PRINT_PARSING
             Serial.print("Appending to buffer value:'");
             Serial.print(currentChar);
             Serial.print("'. Buffer: '");
-            Serial.print(buffer);
+            Serial.print(parsedString);
             Serial.println("'");
             #endif
         }
@@ -91,13 +73,65 @@ void CommandReader::parseBuffer()
 
     _buffer = "";
 
-    if (numbers[0] == 999 && numbers[1] == 999)
+    processCommandBuffer(numbers);
+}
+
+void CommandReader::processCommandBuffer(int numbers[3])
+{
+    CommandType commandType = (CommandType)numbers[0];
+
+    switch (commandType)
     {
+    case CommandTypeMove:
+        _xOffsetPercent = numbers[1];
+        _yOffsetPercent = numbers[2];
+        if (_xOffsetPercent != 0 || _yOffsetPercent != 0)
+        {
+            _shouldMove = true;
+        }
+        
+        #if SERIAL_PRINT_RESULT
+        Serial.print("     x: ");
+        Serial.print(getXOffsetPercent());
+        Serial.print("; y:");
+        Serial.println(getYOffsetPercent());
+        #endif
+
+        break;
+    case CommandTypeFire:
         _shouldFire = true;
+        break;
     }
-    else
-    {
-        _verticalDegrees = numbers[0];
-        _horizontalDegrees = numbers[1];
-    }
+}
+
+bool CommandReader::shouldMove()
+{
+    return _shouldMove;
+}
+
+void CommandReader::moved()
+{
+    _shouldMove = false;
+    _xOffsetPercent = 0;
+    _yOffsetPercent = 0;
+}
+
+int CommandReader::getXOffsetPercent()
+{
+    return _xOffsetPercent;
+}
+
+int CommandReader::getYOffsetPercent()
+{
+    return _yOffsetPercent;
+}
+
+bool CommandReader::shouldFire()
+{
+    return _shouldFire;
+}
+
+void CommandReader::fired()
+{
+    _shouldFire = false;
 }

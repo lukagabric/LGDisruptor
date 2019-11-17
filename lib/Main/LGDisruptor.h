@@ -12,16 +12,11 @@ private:
     Servo *_fireServo;
     CommandReader *_commandReader;
 
-    long _verticalTimer = 0;
-    long _horizontalTimer = 0;
-
     int _currentVerticalValue;
     int _currentHorizontalValue;
 
-    void verticalTimerLoop();
-    void horizontalTimerLoop();
-
     void fire();
+    void move();
 public:
     LGDisruptor();
 

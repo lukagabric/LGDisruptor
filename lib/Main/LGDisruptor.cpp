@@ -3,9 +3,6 @@
 #include <Arduino.h>
 #include "Servo.h"
 
-#define VERTICAL_ANGLE 91
-#define HORIZONTAL_ANGLE 59
-
 LGDisruptor::LGDisruptor()
 {
     _horizontalServo = new Servo();
@@ -32,73 +29,56 @@ void LGDisruptor::setup()
     delay(500);
     _verticalServo->write(_currentVerticalValue);
     delay(500);
+
+    Serial.println("Ready... Set... Go...");
 }
 
 void LGDisruptor::loop()
 {
     _commandReader->read();
 
-    unsigned long currentMillis = millis();
-
-    if (currentMillis - _verticalTimer >= 50)
+    if (_commandReader->shouldMove())
     {
-        verticalTimerLoop();
-        _verticalTimer = currentMillis;
-    }
-
-    if (currentMillis - _horizontalTimer >= 20)
-    {
-        horizontalTimerLoop();
-        _horizontalTimer = currentMillis;
+        move();
     }
 
     if (_commandReader->shouldFire())
     {
-        _commandReader->fired();
         fire();
     }
 }
 
-void LGDisruptor::verticalTimerLoop()
+void LGDisruptor::move()
 {
-    if (_commandReader->getVerticalDegrees() == _currentVerticalValue) return;
+    int xOffset = _commandReader->getXOffsetPercent();
+    int yOffset = _commandReader->getYOffsetPercent();
 
-    if (_currentVerticalValue < _commandReader->getVerticalDegrees())
-    {
-        _currentVerticalValue++;
-    }
-    else
-    {
-        _currentVerticalValue--;
-    }
+    int xDiff = map(xOffset, -100, 100, 5, -5);
+    int yDiff = map(yOffset, -100, 100, 2, -2);
 
-    if (_currentVerticalValue > 93 && _currentVerticalValue < 113)
-    {
-        _verticalServo->write(_currentVerticalValue);
-    }    
-}
+    _currentHorizontalValue += xDiff;
+    _currentVerticalValue += yDiff;
 
-void LGDisruptor::horizontalTimerLoop()
-{
-    if (_commandReader->getHorizontalDegrees() == _currentHorizontalValue) return;
+    Serial.print("     x: ");
+    Serial.print(_currentHorizontalValue);
+    Serial.print("; y:");
+    Serial.println(_currentVerticalValue);
 
-    if (_currentHorizontalValue < _commandReader->getHorizontalDegrees())
-    {
-        _currentHorizontalValue++;
-    }
-    else
-    {
-        _currentHorizontalValue--;
-    }
+    _currentHorizontalValue = max(40, min(140, _currentHorizontalValue));
+    _currentVerticalValue = max(83, min(113, _currentVerticalValue));
 
-    if (_currentHorizontalValue > 50 && _currentHorizontalValue < 140)
-    {
-        _horizontalServo->write(_currentHorizontalValue);
-    }
+    _horizontalServo->write(_currentHorizontalValue);
+    delay(50);
+    _verticalServo->write(_currentVerticalValue);
+    delay(50);
+
+    _commandReader->moved();
 }
 
 void LGDisruptor::fire()
 {
+    _commandReader->fired();
+
     _fireServo->write(40);
     delay(500);
     _fireServo->write(5);
