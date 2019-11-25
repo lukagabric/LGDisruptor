@@ -53,8 +53,8 @@ void LGDisruptor::move()
     int xOffset = _commandReader->getXOffsetPercent();
     int yOffset = _commandReader->getYOffsetPercent();
 
-    int xDiff = map(xOffset, -100, 100, 5, -5);
-    int yDiff = map(yOffset, -100, 100, 2, -2);
+    int xDiff = map(xOffset, -100, 100, 15, -15);
+    int yDiff = map(yOffset, -100, 100, 5, -5);
 
     _currentHorizontalValue += xDiff;
     _currentVerticalValue += yDiff;
